@@ -1,7 +1,7 @@
 from sensor.entity import artifact_entity,config_entity
 from sensor.exception import SensorException
 from sensor.logger import logging
-from scipy.stats import ks_2samp
+from scipy import stats
 import sys,os
 import pandas as pd 
 from typing import Optional
@@ -26,7 +26,7 @@ class DataValidation:
 
    
    
-   def drop_missing_value_column(self,df:pd.DataFrame,report_key_name:str)->Optional[pd.DataFrame]:
+   def drop_missing_values_column(self,df:pd.DataFrame,report_key_name:str)->Optional[pd.DataFrame]:
 
     """
     this function will drop column which contains missing value than specified threshold
@@ -45,7 +45,7 @@ class DataValidation:
         drop_column_names = null_report[null_report>threshold].index 
         
         logging.info(f"Columns to drop : {list(drop_column_names)}")
-        self.validation_error["report_key_name"] = drop_column_names
+        self.validation_error[report_key_name] =list(drop_column_names)
         df.drop(list(drop_column_names),axis=1,inplace=True)
         # return None no columns left
         if len(df.columns)==0:
@@ -69,7 +69,7 @@ class DataValidation:
                 missing_columns.append(base_column)
 
         if len(missing_columns)>0:
-            self.validation_error["report_key_name"] = missing_columns
+            self.validation_error[report_key_name] = missing_columns
             return False
         return True
 
@@ -86,7 +86,7 @@ class DataValidation:
                 base_data,current_data = base_df[base_column],current_df[base_column]
                 # Null hypothesis is that both column data drawn from same distribution
                 logging.info(f"Hypothesis {base_column}:{base_data.dtype},{current_data.dtype}")
-                same_distribution = ks_2samp(base_data,current_data)
+                same_distribution = stats.ks_2samp(base_data,current_data)
 
                 if same_distribution.pvalue>0.05:
                     # we are accepting null hypothesis
@@ -122,15 +122,15 @@ class DataValidation:
         base_df.replace({"na":np.NAN},inplace=True)
         logging.info(f"Replace na value in base df")
         logging.info(f"Drop null value column from base df")
-        base_df=self.drop_missing_value_column(df=base_df,report_key_name="missing_values_within_base_dataset")
+        base_df=self.drop_missing_values_column(df=base_df,report_key_name="missing_values_within_base_dataset")
         logging.info(f"Reading train dataframe")
         train_df=pd.read_csv(self.data_ingestion_artifact.train_file_path)
         logging.info(f"Reading test dataframe")
         test_df=pd.read_csv(self.data_ingestion_artifact.test_file_path)
 
-        train_df = self.drop_missing_value_column(df=base_df,report_key_name="missing_values_within_train_dataset")
+        train_df = self.drop_missing_values_column(df=train_df,report_key_name="missing_values_within_train_dataset")
         logging.info(f"Droping null value columns from train df")
-        test_df = self.drop_missing_value_column(df=base_df,report_key_name="missing_values_within_test_dataset")
+        test_df = self.drop_missing_values_column(df=test_df,report_key_name="missing_values_within_test_dataset")
         logging.info(f"Droping null value columns from test df")
        
         exclude_columns = [TARGET_COLUMN]

@@ -11,7 +11,12 @@ class EnviromentVariable:
     aws_access_key_id:str = os.getenv("AWS_ACCESS_KEY_ID")
     aws_secret_key_id:str = os.getenv("AWS_SECRET_KEY_ID")
 
+TARGET_COLUMN_MAPPING={
+    "pos":1,
+    "neg":0
 
+
+}
 
 env_var=EnviromentVariable()
 

@@ -22,4 +22,4 @@ sensor/entity/artifact_entity.py
 sensor/entity/config_entity.py
 sensor/pipeline/__init__.py
 sensor/pipeline/training_pipeline.py
-sensor/utils/__init__.py
+sensor/utilss/__init__.py
