@@ -2,8 +2,9 @@ from sensor.entity import artifact_entity,config_entity
 from sensor.exception import SensorException
 from sensor.logger import logging
 import numpy as np 
+from sensor import utils
 import sys,os
-from sklearn.preprocessing import pipeline 
+from sklearn.pipeline import Pipeline 
 import pandas as pd 
 from typing import Optional
 from imblearn.combine import SMOTETomek
@@ -25,11 +26,11 @@ class DataTransformation:
             raise SensorException(e, sys)
 
     @classmethod
-    def get_data_transformer_object(cls)->pipeline:
+    def get_data_transformer_object(cls)->Pipeline:
         try:
             simple_imputer=SimpleImputer(strategy='constant',fill_value=0)
             robust_scaler=RobustScaler()
-            pipeline=pipeline(steps=[
+            pipeline=Pipeline(steps=[
                     ('Imputer',simple_imputer),
                     ('RobustScaler',robust_scaler)
                ])   
@@ -38,7 +39,7 @@ class DataTransformation:
         except Exception as e:
             raise e
 
-    def initiate_data_validation(self)->artifact_entity.DataValidationArtifact:
+    def initiate_data_transformation(self,)->artifact_entity.DataTransformationArtifact:
         try:
             train_df = pd.read_csv(self.data_ingestion_artifact.train_file_path)
             test_df=pd.read_csv(self.data_ingestion_artifact.test_file_path)
@@ -56,18 +57,20 @@ class DataTransformation:
             target_feature_test_arr=label_encoder.transform(target_feature_test_df)
 
             transformation_pipeline = DataTransformation.get_data_transformer_object()
-            input_feature_train_arr = transformation_pipeline.fit(input_feature_train_df)
-            input_feature_test_arr = tranformation_pipeline.transform(input_feature_test_df)
+            transformation_pipeline.fit(input_feature_train_df)
+
+            input_feature_train_arr = transformation_pipeline.transform(input_feature_train_df)
+            input_feature_test_arr = transformation_pipeline.transform(input_feature_test_df)
 
 
-            smt = SMOTETomek(sampling_strategy="minority")
-            logging.info(f"Before resampling in training set input : {input_feature_train_arr.shape} Target : {target_feature_train_arr}")
+            smt = SMOTETomek(random_state=42)
+            logging.info(f"Before resampling in training set input : {input_feature_train_arr.shape} Target : {target_feature_train_arr.shape}")
             input_feature_train_arr,target_feature_train_arr = smt.fit_resample(input_feature_train_arr,target_feature_train_arr)
-            logging.info(f"After resampling in training set input : {input_feature_train_arr.shape} Target : {target_feature_train_arr}")
+            logging.info(f"After resampling in training set input : {input_feature_train_arr.shape} Target : {target_feature_train_arr.shape}")
 
-            logging.info(f"Before resampling in testing set input : {input_feature_test_arr.shape} Target : {target_feature_test_arr}")
+            logging.info(f"Before resampling in testing set input : {input_feature_test_arr.shape} Target : {target_feature_test_arr.shape}")
             input_feature_test_arr, target_feature_test_arr = smt.fit_resample(input_feature_test_arr,target_feature_test_arr)
-            logging.info(f"After resampling in testing set input : {input_feature_test_arr.shape} Target : {target_feature_test_arr}")
+            logging.info(f"After resampling in testing set input : {input_feature_test_arr.shape} Target : {target_feature_test_arr.shape}")
 
 
             train_arr = np.c_[input_feature_train_arr,target_feature_train_arr]
@@ -84,7 +87,7 @@ class DataTransformation:
 
 
             utils.save_object(file_path=self.data_transformation_config.transform_object_path,
-             obj=transformation_pipleine)
+             obj=transformation_pipeline)
 
             utils.save_object(file_path=self.data_transformation_config.target_encoder_path,
             obj=label_encoder)
