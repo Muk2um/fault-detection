@@ -3,6 +3,10 @@ from sensor.entity import config_entity,artifact_entity
 from sensor.exception import SensorException
 from sensor.logger import logging
 import os,sys
+from sensor.utils import load_object 
+from sklearn.metrics import f1_score
+import pandas as pd 
+from sensor.config import TARGET_COLUMN
 
 
 class ModelEvaluation:
@@ -22,6 +26,7 @@ class ModelEvaluation:
             self.data_transformation_artifact=data_transformation_artifact
             self.model_trainer_artifact=model_trainer_artifact
             self.model_resolver = ModelResolver()
+            
 
         except Exception as e:
             raise SensorException(e, sys)
@@ -39,6 +44,68 @@ class ModelEvaluation:
                 improved_accuracy=None)
                 logging.info(f"Model evaluation artifact: {model_eval_artifact}")
                 return model_eval_artifact
+
+
+            #finding location of transformer model and target encoder
+            logging.info(f"finding location of transformer model and target encoder")
+            transformer_path = self.model_resolver.get_latest_transformer_path()
+            model_path = self.model_resolver.get_latest_model_path()
+            target_encoder_path = self.model_resolver.get_latest_target_encoder_path()
+
+            #Previous trained objects
+            logging.info(f"Previous trained objects of transformer model and target encoder")
+            transformer = load_object(file_path=transformer_path)
+            model = load_object(file_path=model_path)
+            target_encoder = load_object(file_path=target_encoder_path)
+
+            #currently trained model objects
+            logging.info(f"currently trained objects of transformer model and target encoder")
+            current_transformer = load_object(file_path=self.data_transformation_artifact.transform_object_path)
+            current_model = load_object(file_path=self.model_trainer_artifact.model_path)
+            current_target_encoder = load_object(file_path=self.data_transformation_artifact.target_encoder_path)
+
+
+            test_df = pd.read_csv(self.data_ingestion_artifact.test_file_path)
+            target_df=test_df[TARGET_COLUMN]
+            y_true = target_encoder.transform(target_df)
+            logging.info(f"accuracy using previous trained model")
+            # accuracy using previous trained model
+            
+            input_feature_name=list(transformer.feature_names_in_)
+            input_arr=transformer.transform(test_df[input_feature_name])
+            y_pred=model.predict(input_arr)
+
+            print(f"Prediction using previous model : {target_encoder.inverse_transform(y_pred[:5])}")
+
+            previous_model_score = f1_score(y_true=y_true,y_pred=y_pred)
+
+            logging.info(f"accuracy using previous trained model:{previous_model_score}")
+            logging.info(f"accuracy using curent trained model")
+            #accuracy using curent trained model
+            
+            input_feature_name=list(current_transformer.feature_names_in_)
+            input_arr=current_transformer.transform(test_df[input_feature_name])
+            y_pred=current_model.predict(input_arr)
+            y_true = current_target_encoder.transform(target_df)
+
+            print(f"Prediction using current trained model : {current_target_encoder.inverse_transform(y_pred[:5])}")
+
+            current_model_score = f1_score(y_true=y_true,y_pred=y_pred)
+            logging.info(f"accuracy using curent trained model:{current_model_score}")
+            if current_model_score<=previous_model_score:
+                logging.info(f"Current trained model is not better than previous model")
+                raise Exception("Current trained model is not better than previous model")
+
+            model_eval_artifact = artifact_entity.ModelEvaluationArtifact(is_model_accepted=True, 
+            improved_accuracy=current_model_score-previous_model_score)
+
+            logging.info(f"model evaluation artifact :{model_eval_artifact}")
+
+            return model_eval_artifact
+
+            
+
+
             
 
 
