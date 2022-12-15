@@ -87,7 +87,6 @@ sudo usermod -aG docker ubuntu
 newgrp docker
 ```
 
-
 ```
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
