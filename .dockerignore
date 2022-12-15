@@ -1,0 +1,11 @@
+artifact
+logs
+notebook
+prediction
+saved_models
+*.egg-info
+.env
+aps_failure_training_set112152022_145522.csv
+dump_data.py
+main.py
+README.md

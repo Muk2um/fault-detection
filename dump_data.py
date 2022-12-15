@@ -2,7 +2,8 @@ import pymongo
 import pandas as pd
 import json
 
-client = pymongo.MongoClient("mongodb://localhost:27017/neurolabDB")
+
+client = pymongo.MongoClient("mongodb+srv://muky:LIRnBEt7144wkn9Y@cluster0.ufqox21.mongodb.net/?retryWrites=true&w=majority")
 
 FILE_PATH_NAME="/config/workspace/aps_failure_training_set1.csv"
 DATABASE_NAME="aps"
